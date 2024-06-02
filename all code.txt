@@ -1,0 +1,634 @@
+1.Write a Python program to find the spectrum of the following signal f = 0.25 + 2 sin(2𝜋5𝑘) + sin(2𝜋12.5𝑘) + 1.5 sin(2𝜋20𝑘) + 0.5sin(2𝜋35𝑘)
+import numpy as np
+import matplotlib.pyplot as plt
+from numpy.fft import fft
+N = 256
+T = 1/128
+k = np.arange(N)
+time = k * T
+f = 0.25 + 2*np.sin(2*np.pi*5*time) + 1*np.sin(2*np.pi*12.5*time) + 1.5*np.sin(2*np.pi*20*time) + 0.5*np.sin(2*np.pi*35*time)
+plt.figure(figsize=(12, 6))
+plt.subplot(2, 1, 1)
+plt.plot(time, f)
+plt.title("Signal sampled at 128Hz")
+plt.xlabel("Time [s]")
+plt.ylabel("Amplitude")
+F = fft(f)
+magF = np.abs(F[:N//2]) / (N//2)
+hertz = np.fft.fftfreq(N, T)[:N//2]
+plt.subplot(2, 1, 2)
+plt.stem(hertz, magF, 'b', markerfmt=" ", basefmt="-b")
+plt.title("Frequency components")
+plt.xlabel("Frequency [Hz]")
+plt.ylabel("Magnitude")
+plt.tight_layout()
+plt.show()
+
+2.Explain and simulate Discrete Fourier transform (DFT) and Inverse Discrete Fourier Transform (IDFT) using Python
+import numpy as np
+import matplotlib.pyplot as plt
+A = 1.0        
+f = 5.0        
+phi = 0        
+Fs = 50.0      
+T = 2.0        
+t = np.arange(0, T, 1/Fs)
+signal = A * np.sin(2 * np.pi * f * t + phi)
+def DFT(signal):
+    N = len(signal)
+    dft = np.zeros(N, dtype=complex)
+    for k in range(N):
+        for n in range(N):
+            angle = -2j * np.pi * k * n / N
+            dft[k] += signal[n] * np.exp(angle)
+    return dft
+def IDFT(dft):
+    N = len(dft)
+    signal = np.zeros(N, dtype=complex)
+    for n in range(N):
+        for k in range(N):
+            angle = 2j * np.pi * k * n / N
+            signal[n] += dft[k] * np.exp(angle)
+        signal[n] /= N
+    return signal
+dft = DFT(signal)
+idft = IDFT(dft)
+plt.figure(figsize=(15, 5))
+plt.subplot(1, 3, 1)
+plt.plot(t, signal, label='Original Signal')
+plt.title('Time Domain Signal')
+plt.xlabel('Time [s]')
+plt.ylabel('Amplitude')
+plt.legend()
+frequencies = np.fft.fftfreq(len(dft), 1/Fs)
+plt.subplot(1, 3, 2)
+plt.stem(frequencies, np.abs(dft), 'r', markerfmt='ro', basefmt=" ")
+plt.title('Frequency Domain (DFT)')
+plt.xlabel('Frequency [Hz]')
+plt.ylabel('Magnitude')
+plt.xlim(0, Fs/2)
+plt.subplot(1, 3, 3)
+plt.plot(t, idft.real, label='Reconstructed Signal')
+plt.title('Reconstructed Signal (IDFT)')
+plt.xlabel('Time [s]')
+plt.ylabel('Amplitude')
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+3.Write a Python program to perform following operation – i) Sampling ii) Quantization iii) Coding
+import numpy as np
+import matplotlib.pyplot as plt
+def sample_signal(signal, Fs, T):
+    t = np.arange(0, T, 1/Fs)
+    sampled_signal = signal(t)
+    return t, sampled_signal
+def quantize_signal(signal, num_levels):
+    min_val = np.min(signal)
+    max_val = np.max(signal)
+    q_levels = np.linspace(min_val, max_val, num_levels)
+    quantized_indices = np.digitize(signal, q_levels) - 1
+    quantized_signal = q_levels[quantized_indices]
+    return quantized_signal, quantized_indices
+def encode_signal(quantized_indices, num_levels):
+    num_bits = int(np.ceil(np.log2(num_levels)))
+    codes = {i: np.binary_repr(i, width=num_bits) for i in range(num_levels)}
+    encoded_signal = [codes[val] for val in quantized_indices]
+    return encoded_signal
+def main():
+    A = 1.0       
+    f = 5.0       
+    phi = 0       
+    Fs = 50.0     
+    T = 1.0       
+    num_levels = 16  
+    signal = lambda t: A * np.sin(2 * np.pi * f * t + phi)
+    t, sampled_signal = sample_signal(signal, Fs, T)
+    quantized_signal, quantized_indices = quantize_signal(sampled_signal, num_levels)
+    encoded_signal = encode_signal(quantized_indices, num_levels)
+    plt.figure(figsize=(15, 5))
+    t_continuous = np.linspace(0, T, 1000)
+    continuous_signal = signal(t_continuous)
+    plt.subplot(1, 3, 1)
+    plt.plot(t_continuous, continuous_signal, label='Original Signal')
+    plt.stem(t, sampled_signal, 'r', markerfmt='ro', label='Sampled Signal', basefmt=" ")
+    plt.title('Sampling')
+    plt.xlabel('Time [s]')
+    plt.ylabel('Amplitude')
+    plt.legend()
+    plt.subplot(1, 3, 2)
+    plt.stem(t, quantized_signal, 'g', markerfmt='go', basefmt=" ")
+    plt.title('Quantization')
+    plt.xlabel('Time [s]')
+    plt.ylabel('Amplitude')
+    plt.subplot(1, 3, 3)
+    for i, code in enumerate(encoded_signal[:min(len(encoded_signal), 20)]):
+        plt.text(0.1, 1 - i*0.05, f'Sample {i}: {code}', fontsize=10)
+    plt.title('Coding')
+    plt.axis('off')
+    plt.tight_layout()
+    plt.show() 
+if __name__ == "__main__":
+    main()
+
+4.Write a Python program to perform the convolution and correlation of two sequences.
+import numpy as np
+import matplotlib.pyplot as plt
+sequence1 = np.array([1, 2, 3, 4, 5])
+sequence2 = np.array([2, 1, 0, -1, -2])
+convolution_result = np.convolve(sequence1, sequence2, mode='full')
+correlation_result = np.correlate(sequence1, sequence2, mode='full')
+plt.figure(figsize=(14, 10))
+plt.subplot(2, 1, 1)
+plt.stem(convolution_result)
+plt.title("Convolution Result")
+plt.xlabel("Index")
+plt.ylabel("Amplitude")
+# Plot Correlation Result
+plt.subplot(2, 1, 2)
+plt.stem(correlation_result)
+plt.title("Correlation Result")
+plt.xlabel("Index")
+plt.ylabel("Amplitude")
+plt.tight_layout()
+plt.show()
+
+5.Write a program to display the following region of a speech signal: i) Voiced region, ii) Unvoiced region, iii) Silence region.
+import numpy as np
+import matplotlib.pyplot as plt
+def generate_voiced_signal(duration, frequency, sampling_rate):
+    t = np.linspace(0, duration, int(duration * sampling_rate), endpoint=False)
+    return 0.5 * np.sin(2 * np.pi * frequency * t)
+def generate_unvoiced_signal(duration, sampling_rate):
+    return 0.5 * np.random.rand(int(duration * sampling_rate)) - 0.25
+def generate_silence_signal(duration, sampling_rate):
+    return np.zeros(int(duration * sampling_rate))
+def detect_regions(signal, threshold_voiced, threshold_unvoiced):
+    voiced_regions = []
+    unvoiced_regions = []
+    silence_regions = []
+    is_voiced = False
+    is_unvoiced = False
+    is_silence = False
+    energy = np.sum(np.square(signal))
+    for i in range(len(signal)):
+        energy_window = np.sum(np.square(signal[i:i+100]))  
+        if energy_window > threshold_voiced:
+            if not is_voiced:
+                voiced_regions.append(i)
+                is_voiced = True
+            is_unvoiced = False
+            is_silence = False
+        elif energy_window > threshold_unvoiced:
+            if not is_unvoiced:
+                unvoiced_regions.append(i)
+                is_unvoiced = True
+            is_voiced = False
+            is_silence = False
+        else:
+            if not is_silence:
+                silence_regions.append(i)
+                is_silence = True
+            is_voiced = False
+            is_unvoiced = False
+    return voiced_regions, unvoiced_regions, silence_regions
+duration_voiced = 0.5  
+duration_unvoiced = 0.5  
+duration_silence = 0.5  
+frequency_voiced = 200  
+sampling_rate = 8000  
+voiced_signal = generate_voiced_signal(duration_voiced, frequency_voiced, sampling_rate)
+unvoiced_signal = generate_unvoiced_signal(duration_unvoiced, sampling_rate)
+silence_signal = generate_silence_signal(duration_silence, sampling_rate)
+speech_signal = np.concatenate((voiced_signal, unvoiced_signal, silence_signal))
+threshold_voiced = 0.1 * np.sum(np.square(speech_signal))
+threshold_unvoiced = 0.01 * np.sum(np.square(speech_signal))
+voiced_regions, unvoiced_regions, silence_regions = detect_regions(speech_signal, threshold_voiced, threshold_unvoiced)
+plt.figure(figsize=(10, 6))
+plt.plot(speech_signal, label='Speech Signal')
+plt.scatter(voiced_regions, speech_signal[voiced_regions], color='green', label='Voiced Region')
+plt.scatter(unvoiced_regions, speech_signal[unvoiced_regions], color='blue', label='Unvoiced Region')
+plt.scatter(silence_regions, speech_signal[silence_regions], color='red', label='Silence Region')
+plt.xlabel('Sample')
+plt.ylabel('Amplitude')
+plt.title('Speech Signal with Voiced, Unvoiced, and Silence Regions')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+6. Write a program to compute short term auto-correlation of a speech signal.
+import numpy as np
+import matplotlib.pyplot as plt
+fs = 8000  
+t = np.linspace(0, 1, fs)  
+freq = 440  
+speech_signal = 0.5 * np.sin(2 * np.pi * freq * t) + 0.5 * np.random.randn(len(t))
+autocorr_signal = np.correlate(speech_signal, speech_signal, mode='full')
+autocorr_signal = autocorr_signal[len(autocorr_signal)//2:]  
+plt.figure(figsize=(14, 6))
+plt.subplot(2, 1, 1)
+plt.plot(t, speech_signal)
+plt.title("Original Speech Signal")
+plt.xlabel("Time [s]")
+plt.ylabel("Amplitude")
+plt.subplot(2, 1, 2)
+plt.plot(autocorr_signal)
+plt.title("Autocorrelation of Speech Signal")
+plt.xlabel("Lag")
+plt.ylabel("Autocorrelation")
+plt.tight_layout()
+plt.show()
+
+7.Let x(n )= { 1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2, 1}. Determine and plot the following sequences. y(n)=2x(n − 5) − 3x(n+4).
+import numpy as np
+import matplotlib.pyplot as plt
+x_n = np.array([1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2, 1])
+n = np.arange(len(x_n))
+x_n_padded = np.pad(x_n, (5, 4), mode='constant')
+y_n = 2 * x_n_padded[n] - 3 * x_n_padded[n + 9]
+plt.stem(n, x_n, label='x(n)', linefmt='b-', markerfmt='bo', basefmt=' ')
+plt.stem(n, y_n, label='y(n)', linefmt='r-', markerfmt='ro', basefmt=' ')
+plt.title('Plot of x(n) and y(n)')
+plt.xlabel('n')
+plt.ylabel('Amplitude')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+8. Design an FIR filter to meet the following specifications—Passsband edge=2KHz, Stopband edge= 5KHZ, Fs=20KHz, Filter length =21, use Hanning window in the design.
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy import signal
+passband_edge = 2000  
+stopband_edge = 5000  
+Fs = 20000 
+filter_length = 21  
+window = 'hann'  
+passband_edge_normalized = passband_edge / (Fs / 2)
+stopband_edge_normalized = stopband_edge / (Fs / 2)
+filter_coeffs = signal.firwin(filter_length, [passband_edge_normalized, stopband_edge_normalized], window=window)
+w, h = signal.freqz(filter_coeffs, 1, worN=8000)
+frequencies = (w / np.pi) * (Fs / 2)
+plt.figure(figsize=(10, 6))
+plt.plot(frequencies, 20 * np.log10(abs(h)), 'b')
+plt.axvline(passband_edge, color='g', linestyle='--', label='Passband Edge')
+plt.axvline(stopband_edge, color='r', linestyle='--', label='Stopband Edge')
+plt.title('Frequency Response of FIR Filter')
+plt.xlabel('Frequency (Hz)')
+plt.ylabel('Gain (dB)')
+plt.grid(True)
+plt.legend()
+plt.show()
+
+9.Creating a signals ‗s‘ with three sinusoidal components (at 5,15,30 Hz) and a time vector ‗t‘ of 100 samples with a sampling rate of 100 Hz, and displaying it in the time domain. Design an IIR filter to suppress frequencies of 5 Hz and 30 Hz from given signal.
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy import signal
+sampling_rate = 100  
+duration = 1  
+num_samples = sampling_rate * duration
+frequencies = [5, 15, 30]  
+amplitudes = [1, 0.5, 0.7]  
+t = np.linspace(0, duration, num_samples)
+s = np.zeros_like(t)
+for freq, amp in zip(frequencies, amplitudes):
+    s += amp * np.sin(2 * np.pi * freq * t)
+nyquist_freq = 0.5 * sampling_rate
+normalized_cutoff_freq = [5 / nyquist_freq, 30 / nyquist_freq]
+b, a = signal.butter(4, normalized_cutoff_freq, btype='bandstop')
+filtered_s = signal.filtfilt(b, a, s)
+plt.figure(figsize=(10, 6))
+plt.plot(t, s, label='Original Signal')
+plt.plot(t, filtered_s, label='Filtered Signal')
+plt.title('Original Signal and Filtered Signal')
+plt.xlabel('Time (s)')
+plt.ylabel('Amplitude')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+10.: Design a Lowpass filter to meet the following specifications—Passsband edge=1.5KHz, Transition width = 0.5KHz, Fs=10KHz Filter length =67; use Blackman window in the design.
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy import signal
+passband_edge = 1500 
+transition_width = 500  
+Fs = 10000  
+filter_length = 67  
+window = 'blackman'  
+passband_edge_normalized = passband_edge / (Fs / 2)
+transition_width_normalized = transition_width / (Fs / 2)
+filter_coeffs = signal.firwin(filter_length, passband_edge_normalized, window=window, pass_zero=True, fs=Fs)
+w, h = signal.freqz(filter_coeffs, 1, worN=8000)
+frequencies = (w / np.pi) * (Fs / 2)
+plt.figure(figsize=(10, 6))
+plt.plot(frequencies, 20 * np.log10(abs(h)), 'b')
+plt.axvline(passband_edge, color='g', linestyle='--', label='Passband Edge')
+plt.title('Frequency Response of Lowpass Filter')
+plt.xlabel('Frequency (Hz)')
+plt.ylabel('Gain (dB)')
+plt.grid(True)
+plt.legend()
+plt.show()
+
+11.Design a bandpass filter of length M=32 with passband edge frequencies fp1=0.2 and fp2=0.35 and stopband edge frequencies fs1=.1 and fs2=0.425.
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy import signal
+M = 32  
+fp1 = 0.2  
+fp2 = 0.35  
+fs1 = 0.1  
+fs2 = 0.425  
+filter_coeffs = signal.firwin(M, [fs1, fp1, fp2, fs2], pass_zero=False)
+w, h = signal.freqz(filter_coeffs, worN=8000)
+plt.figure(figsize=(10, 6))
+plt.plot(0.5 * w / np.pi, 20 * np.log10(abs(h)), 'b')
+plt.title('Frequency Response of Bandpass Filter')
+plt.xlabel('Frequency (Normalized)')
+plt.ylabel('Gain (dB)')
+plt.grid(True)
+plt.show()
+
+12. Use a Python program to determine and show the ―poles‖, ―zeros‖ and also ―roots‖ of the following systems-
+(i)H(s)=(s^2 + 1) / (s^4 + 2* s^2 + 1) (ii) H(s) = (4* s^2 + 8*s + 10) / (2*s^3 + 8*s^2 + 18*s + 20)
+import sympy as sp
+import numpy as np
+import matplotlib.pyplot as plt
+s = sp.symbols('s')
+H1 = (s**3 + 1) / (s**4 + 2*s**2 + 1)
+H2 = (4*s**2 + 8*s + 10) / (2*s**3 + 8*s**2 + 18*s + 20)
+roots_num_H1 = list(sp.roots(sp.numer(H1), s).keys())
+roots_den_H1 = list(sp.roots(sp.denom(H1), s).keys())
+roots_num_H2 = list(sp.roots(sp.numer(H2), s).keys())
+roots_den_H2 = list(sp.roots(sp.denom(H2), s).keys())
+roots_H1_real = np.array([sp.re(root) for root in roots_num_H1 + roots_den_H1])
+roots_H1_imag = np.array([sp.im(root) for root in roots_num_H1 + roots_den_H1])
+roots_H2_real = np.array([sp.re(root) for root in roots_num_H2 + roots_den_H2])
+roots_H2_imag = np.array([sp.im(root) for root in roots_num_H2 + roots_den_H2])
+plt.figure(figsize=(12, 6))
+plt.subplot(1, 2, 1)
+plt.scatter(roots_H1_real, roots_H1_imag, marker='x', color='r', label='Poles/Zeros/Roots')
+plt.axvline(x=0, color='k', linestyle='--')
+plt.axhline(y=0, color='k', linestyle='--')
+plt.title('Poles, Zeros, and Roots of H1')
+plt.xlabel('Real')
+plt.ylabel('Imaginary')
+plt.legend()
+plt.grid(True)
+plt.subplot(1, 2, 2)
+plt.scatter(roots_H2_real, roots_H2_imag, marker='x', color='r', label='Poles/Zeros/Roots')
+plt.axvline(x=0, color='k', linestyle='--')
+plt.axhline(y=0, color='k', linestyle='--')
+plt.title('Poles, Zeros, and Roots of H2')
+plt.xlabel('Real')
+plt.ylabel('Imaginary')
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
+13.important100%
+# x(n) = K.exp[c,n],
+# where K = 2, c = -1/12 + jpi/6,n belong to N and n=0....40
+import numpy as np
+import matplotlib.pyplot as plt
+c = -(1/12) + (np.pi/6)*1j
+K = 2
+n = np.arange(0, 40)  
+x = K * np.exp(c * n)
+plt.subplot(2, 1, 1)
+markerline, stemlines, baseline = plt.stem(n, np.real(x), basefmt=" ")
+plt.setp(baseline, visible=False)  # Hide the baseline
+plt.xlabel("Time index n")
+plt.ylabel("Amplitude")
+plt.title("Real part")
+plt.subplot(2, 1, 2)
+markerline, stemlines, baseline = plt.stem(n, np.imag(x), basefmt=" ")
+plt.setp(baseline, visible=False)  # Hide the baseline
+plt.xlabel("Time index n")
+plt.ylabel("Amplitude")
+plt.title("Imaginary part")
+plt.tight_layout()
+plt.show()
+
+14.important2
+# determine the frequency response H(exp of (jW)) of a system characterized by h(n) = (.0)^n * u(n). plot the magnitude and phase response
+import numpy as np
+import matplotlib.pyplot as plt
+w = np.linspace(0, np.pi, 501) 
+H = np.exp(1j * w) / (np.exp(1j * w) - 0.9)
+magH = np.abs(H)
+angH = np.angle(H)
+plt.subplot(2, 1, 1)
+plt.plot(w / np.pi, magH)
+plt.grid()
+plt.xlabel("Frequency in π units")
+plt.ylabel("|H|")
+plt.title("Magnitude Response")
+plt.subplot(2, 1, 2)
+plt.plot(w / np.pi, angH / np.pi)
+plt.grid()
+plt.xlabel("Frequency in π units")
+plt.ylabel("Phase in π Radians")
+plt.title("Phase Response")
+plt.tight_layout()
+plt.show()
+
+15.important3
+#DFT of linear sequence of {1,2,3,4,5} sequence and 501 ports
+import numpy as np
+import matplotlib.pyplot as plt
+from numpy.fft import fft
+x = np.array([1, 2, 3, 4, 5])
+X = fft(x)
+N = len(x)
+k = np.arange(N)
+w = (2 * np.pi / N) * k
+magX = np.abs(X)
+angX = np.angle(X)
+realX = np.real(X)
+imagX = np.imag(X)
+plt.figure(figsize=(10, 8))
+
+plt.subplot(2, 2, 1)
+plt.stem(k / N, magX, basefmt=" ")
+plt.grid()
+plt.xlabel("Frequency in units of 2π/N")
+plt.ylabel("Magnitude")
+plt.title("Magnitude Part")
+
+plt.subplot(2, 2, 3)
+plt.stem(k / N, angX, basefmt=" ")
+plt.grid()
+plt.xlabel("Frequency in units of 2π/N")
+plt.ylabel("Angle (radians)")
+plt.title("Angle Part")
+plt.subplot(2, 2, 2)
+plt.stem(k / N, realX, basefmt=" ")
+plt.grid()
+plt.xlabel("Frequency in units of 2π/N")
+plt.ylabel("Real Part")
+plt.title("Real Part")
+plt.subplot(2, 2, 4)
+plt.stem(k / N, imagX, basefmt=" ")
+plt.grid()
+plt.xlabel("Frequency in units of 2π/N")
+plt.ylabel("Imaginary Part")
+plt.title("Imaginary Part")
+plt.tight_layout()
+plt.show()
+
+16. sirer sheet theke
+(i):
+import numpy as np
+import matplotlib.pyplot as plt
+t = np.linspace(0, 1, 1000, endpoint=False)  
+signal1 = np.sin(2 * np.pi * 5 * t)  
+signal2 = 0.5 * np.cos(2 * np.pi * 10 * t) 
+sum_signal = signal1 + signal2
+plt.figure(figsize=(10, 4))
+plt.subplot(3, 1, 1)
+plt.plot(t, signal1, label='Signal 1')
+plt.legend()
+plt.subplot(3, 1, 2)
+plt.plot(t, signal2, label='Signal 2')
+plt.legend()
+plt.subplot(3, 1, 3)
+plt.plot(t, sum_signal, label='Sum of Signals')
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+(ii):
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.fft import fft
+# Example: Generate a signal with two frequencies
+fs = 1000  # Sampling rate in Hz
+t = np.arange(0, 1, 1/fs)  # Time vector
+frequency1 = 50  # Frequency in Hz
+frequency2 = 120  # Frequency in Hz
+signal = 0.7 * np.sin(2 * np.pi * frequency1 * t) + 0.3 * np.sin(2 * np.pi * frequency2 * t)
+n = len(signal)  # Number of samples
+freq = np.fft.fftfreq(n, d=1/fs)  # Frequency axis
+fft_values = fft(signal)  # Compute the FFT
+magnitude_spectrum = np.abs(fft_values) / n  # Normalize by the number of samples
+# Identify the index of the maximum amplitude in the spectrum
+max_index = np.argmax(magnitude_spectrum)
+dominant_frequency = freq[max_index]
+# Plot the signal
+plt.subplot(2, 1, 1)
+plt.plot(t, signal)
+plt.title('Digital Signal')
+plt.xlabel('Time (s)')
+plt.ylabel('Amplitude')
+
+# Plot the frequency spectrum
+plt.subplot(2, 1, 2)
+plt.plot(freq, magnitude_spectrum)
+plt.title('Frequency Spectrum')
+plt.xlabel('Frequency (Hz)')
+plt.ylabel('Amplitude')
+
+plt.tight_layout()
+plt.show()
+
+print("Dominant Frequency: {:.2f} Hz".format(dominant_frequency))
+
+(iii):
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.signal import butter, lfilter
+
+# Generate a sample signal (sine wave with noise)
+fs = 1000  # Sampling frequency
+t = np.linspace(0, 1, fs, endpoint=False)  # Time vector
+f_signal = 5  # Frequency of the signal
+signal = np.sin(2 * np.pi * f_signal * t) + 0.5 * np.random.normal(size=len(t))
+
+# Plot the original signal
+plt.figure(figsize=(10, 4))
+plt.subplot(2, 1, 1)
+plt.plot(t, signal, label='Original Signal')
+plt.title('Original Signal')
+plt.xlabel('Time')
+plt.ylabel('Amplitude')
+plt.legend()
+
+# Design a low-pass Butterworth filter
+def butter_lowpass_filter(data, cutoff_freq, fs, order=4):
+    nyquist = 0.5 * fs
+    normal_cutoff = cutoff_freq / nyquist
+    b, a = butter(order, normal_cutoff, btype='low', analog=False)
+    y = lfilter(b, a, data)
+    return y
+
+# Apply a low-pass filter to the signal
+cutoff_frequency = 10  # Adjust this value based on your requirements
+filtered_signal = butter_lowpass_filter(signal, cutoff_frequency, fs)
+
+# Plot the filtered signal
+plt.subplot(2, 1, 2)
+plt.plot(t, filtered_signal, label=f'Filtered Signal (Cutoff={cutoff_frequency} Hz)')
+plt.title('Filtered Signal')
+plt.xlabel('Time')
+plt.ylabel('Amplitude')
+plt.legend()
+
+# Display the plots
+plt.tight_layout()
+plt.show()
+
+(iv):
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Function to generate a composite signal
+def generate_composite_signal(duration, sampling_rate, frequencies, amplitudes):
+    t = np.linspace(0, duration, int(duration * sampling_rate), endpoint=False)
+    signal = np.zeros_like(t)
+
+    for freq, amp in zip(frequencies, amplitudes):
+        signal += amp * np.sin(2 * np.pi * freq * t)
+
+    return t, signal
+
+# Function to compute the frequency spectrum using Fourier Transform
+def compute_frequency_spectrum(signal, sampling_rate):
+    n = len(signal)
+    freq = np.fft.fftfreq(n, d=1/sampling_rate)
+    fft_values = np.fft.fft(signal)
+    magnitude_spectrum = np.abs(fft_values) / n  # Normalize by the number of samples
+
+    return freq, magnitude_spectrum
+
+# Parameters
+duration = 1  # seconds
+sampling_rate = 1000  # Hz
+frequencies = [10, 30, 50]  # Hz
+amplitudes = [1, 0.5, 0.2]
+
+# Generate a composite signal
+time, composite_signal = generate_composite_signal(duration, sampling_rate, frequencies, amplitudes)
+
+# Compute the frequency spectrum
+freq, magnitude_spectrum = compute_frequency_spectrum(composite_signal, sampling_rate)
+
+# Plot the original signal
+plt.subplot(2, 1, 1)
+plt.plot(time, composite_signal)
+plt.title('Composite Signal')
+plt.xlabel('Time (s)')
+plt.ylabel('Amplitude')
+
+# Plot the frequency spectrum
+plt.subplot(2, 1, 2)
+plt.plot(freq, magnitude_spectrum)
+plt.title('Frequency Spectrum')
+plt.xlabel('Frequency (Hz)')
+plt.ylabel('Amplitude')
+plt.tight_layout()
+plt.show()
+
+#https://ideone.com/p1vu6q
